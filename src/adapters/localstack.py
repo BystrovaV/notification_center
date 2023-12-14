@@ -24,14 +24,13 @@ class LocalStack:
 
 
 class LocalStackSESService(EmailService):
-    def __init__(self, client: BaseClient):
+    def __init__(self, client: BaseClient, settings: Settings):
         self.client = client
+        self.settings = settings
 
     def send_email(self, email: str, text: str):
         try:
-            self.client.verify_email_identity(
-                EmailAddress="user_management@example.org"
-            )
+            self.client.verify_email_identity(EmailAddress=self.settings.SES_SOURCE)
             logging.info(f"Email {email} is successfully verifyied")
         except NoCredentialsError as e:
             logging.exception(e)
@@ -41,7 +40,7 @@ class LocalStackSESService(EmailService):
             # raise LocalStackConnectionException
 
         try:
-            self.client.send_email(
+            response = self.client.send_email(
                 Destination={
                     "ToAddresses": [
                         email,
@@ -59,8 +58,10 @@ class LocalStackSESService(EmailService):
                         "Data": text,
                     },
                 },
-                Source="user_management@example.org",
+                Source=self.settings.SES_SOURCE,
             )
+
+            return response["MessageId"]
         except Exception as e:
             logging.exception(e)
             # raise LocalStackConnectionException

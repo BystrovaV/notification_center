@@ -1,24 +1,30 @@
+import logging
 import time
 
 import pika
 from pika.adapters.asyncio_connection import AsyncioConnection
 
-from dependencies.dependencies import save_email_use_case
+from ports.queue import Queue
+
+logger = logging.getLogger(__name__)
 
 
 class Consumer:
-    def __init__(self, url: str):
+    def __init__(self, url: str, queues: list[Queue]):
         self.url = url
         self.connection = None
         self.channel = None
 
         self.consuming = False
-        self.was_consuming = False
         self.closing = False
 
         self.should_reconnect = False
 
+        self.queues = queues
+
     def connect(self) -> AsyncioConnection:
+        logger.info("Create connection")
+
         return AsyncioConnection(
             parameters=pika.URLParameters(self.url),
             on_open_callback=self.on_connection_open,
@@ -29,6 +35,7 @@ class Consumer:
     def close_connection(self):
         self.consuming = False
         if not self.connection.is_closing and not self.connection.is_closed:
+            logger.info("Close connection")
             self.connection.close()
 
     def on_connection_open(self, _unused_connection):
@@ -48,24 +55,30 @@ class Consumer:
     def on_channel_open(self, channel):
         self.channel = channel
         self.channel.add_on_close_callback(self.on_channel_closed)
-        self.queue_consume("reset_password")
+        self.queue_consume()
 
     def on_channel_closed(self, channel, reason):
         self.close_connection()
 
-    def queue_consume(self, queue_name):
+    def queue_consume(self):
         self.channel.add_on_cancel_callback(self.on_consumer_cancelled)
-        print("in queue declare")
-        self.channel.queue_declare(queue=queue_name)
-        self.channel.basic_consume(
-            queue=queue_name, on_message_callback=self.on_message, auto_ack=True
-        )
 
-        self.was_consuming = True
+        # --------------------
+        logger.info("Declare queue")
+        for queue in self.queues:
+            self.channel.queue_declare(queue=queue.queue_name)
+            self.channel.basic_consume(
+                queue=queue.queue_name,
+                on_message_callback=queue.on_message,
+                auto_ack=True,
+            )
+        # --------------------
+
         self.consuming = True
 
     def on_consumer_cancelled(self, method_frame):
         if self.channel:
+            logger.info("Close channel")
             self.channel.close()
 
     def stop_consuming(self):
@@ -73,8 +86,8 @@ class Consumer:
             self.consuming = False
             self.channel.close()
 
-    def on_message(channel, _unused_channel, basic_deliver, properties, body):
-        save_email_use_case()(body)
+    # def on_message(self, channel, _unused_channel, basic_deliver, properties, body):
+    # save_email_use_case()(body)
 
     def run(self):
         self.connection = self.connect()
@@ -95,10 +108,10 @@ class Consumer:
 
 
 class ReconnectingConsumer:
-    def __init__(self, amqp_url):
+    def __init__(self, amqp_url, queues: list[Queue]):
         self.reconnect_delay = 30
         self.amqp_url = amqp_url
-        self.consumer = Consumer(self.amqp_url)
+        self.consumer = Consumer(self.amqp_url, queues)
 
     def run(self):
         while True:
@@ -111,7 +124,7 @@ class ReconnectingConsumer:
 
     def _maybe_reconnect(self):
         if self.consumer.should_reconnect:
-            print("reconnection")
+            logger.info("Reconnect to rabbitmq")
             self.consumer.stop()
             time.sleep(self.reconnect_delay)
-            self.consumer = Consumer(self.amqp_url)
+            self.consumer = Consumer(self.amqp_url, self.consumer.queues)
