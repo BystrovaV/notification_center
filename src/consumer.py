@@ -61,6 +61,8 @@ class Consumer:
         self.close_connection()
 
     def queue_consume(self):
+        self.channel.basic_qos(prefetch_count=1)
+
         self.channel.add_on_cancel_callback(self.on_consumer_cancelled)
 
         # --------------------
@@ -70,7 +72,7 @@ class Consumer:
             self.channel.basic_consume(
                 queue=queue.queue_name,
                 on_message_callback=queue.on_message,
-                auto_ack=True,
+                # auto_ack=True,
             )
         # --------------------
 

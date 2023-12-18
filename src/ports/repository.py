@@ -11,5 +11,5 @@ class DocumentRepository(ABC):
         pass
 
     @abstractmethod
-    def get_find_by_id(self, collection_name: str, id):
+    def find_by_id(self, collection_name: str, id):
         pass

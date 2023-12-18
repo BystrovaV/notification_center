@@ -4,11 +4,12 @@ import boto3
 from botocore.client import BaseClient
 from botocore.exceptions import NoCredentialsError
 
+from core.exceptions import SesServiceConnectionException
 from core.settings import Settings
 from ports.email_service import EmailService
 
 
-class LocalStack:
+class AWSEngine:
     def __init__(self, session):
         self.session = session
 
@@ -23,7 +24,7 @@ class LocalStack:
         return cls(session)
 
 
-class LocalStackSESService(EmailService):
+class SESService(EmailService):
     def __init__(self, client: BaseClient, settings: Settings):
         self.client = client
         self.settings = settings
@@ -34,10 +35,10 @@ class LocalStackSESService(EmailService):
             logging.info(f"Email {email} is successfully verifyied")
         except NoCredentialsError as e:
             logging.exception(e)
-            # raise LocalStackConnectionException
+            raise SesServiceConnectionException
         except Exception as e:
             logging.exception(e)
-            # raise LocalStackConnectionException
+            raise SesServiceConnectionException
 
         try:
             response = self.client.send_email(
@@ -64,4 +65,4 @@ class LocalStackSESService(EmailService):
             return response["MessageId"]
         except Exception as e:
             logging.exception(e)
-            # raise LocalStackConnectionException
+            raise SesServiceConnectionException

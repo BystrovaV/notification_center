@@ -1,7 +1,7 @@
 import boto3
 import pytest
 
-from adapters.localstack import LocalStackSESService
+from adapters.aws_services import SESService
 
 
 @pytest.fixture(scope="module")
@@ -22,7 +22,7 @@ def ses_client(boto3_session, settings):
 
 @pytest.fixture
 def local_stack_ses_service(ses_client, settings):
-    return LocalStackSESService(ses_client, settings)
+    return SESService(ses_client, settings)
 
 
 def test_send_email(local_stack_ses_service):
