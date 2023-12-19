@@ -13,9 +13,13 @@ class SesQueue(Queue):
         logging.info("after init")
 
     @property
-    def queue_name(self):
+    def queue_name(self) -> str:
         return self.settings.SES_QUEUE
 
-    def on_message(self, _unused_channel, basic_deliver, properties, body):
-        print(body)
-        # return self.use_case(body)
+    def on_message(self, channel, basic_deliver, properties, body):
+        try:
+            self.use_case(body)
+            channel.basic_ack(delivery_tag=basic_deliver.delivery_tag)
+            logging.info("Successful delivery")
+        except Exception:
+            channel.basic_nack(delivery_tag=basic_deliver.delivery_tag)

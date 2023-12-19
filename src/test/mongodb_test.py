@@ -25,7 +25,7 @@ def test_save(mongodb_repository, settings):
     id = mongodb_repository.save_document(settings.DB_COLLECTION, {"Test1": "Test1"})
     assert id is not None
 
-    obj_id = mongodb_repository.get_find_by_id(settings.DB_COLLECTION, id)
+    obj_id = mongodb_repository.find_by_id(settings.DB_COLLECTION, id)
     assert obj_id is not None
     assert obj_id["_id"] == id
 

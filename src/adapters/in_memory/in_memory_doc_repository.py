@@ -16,7 +16,7 @@ class InMemoryDocumentRepository(DocumentRepository):
     def get_all(self, collection_name: str):
         return self.collections.get(collection_name)
 
-    def get_find_by_id(self, collection_name: str, id):
+    def find_by_id(self, collection_name: str, id):
         if collection := self.collections.get(collection_name):
             for item in collection:
                 if item["_id"] == id:

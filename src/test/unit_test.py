@@ -30,7 +30,7 @@ def test_doc_repository(doc_repository):
     id = doc_repository.save_document("test", body)
     assert id is not None
 
-    elem = doc_repository.get_find_by_id("test", id)
+    elem = doc_repository.find_by_id("test", id)
     assert elem is not None
     assert elem["email"] == body["email"]
 
