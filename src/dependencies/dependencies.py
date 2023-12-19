@@ -15,7 +15,9 @@ def get_localstack_ses_service() -> SESService:
 
 
 def save_email_use_case() -> SaveEmailUseCase:
-    return SaveEmailUseCase(get_localstack_ses_service(), get_mongodb_repository())
+    return SaveEmailUseCase(
+        get_localstack_ses_service(), get_mongodb_repository(), get_settings()
+    )
 
 
 def ses_queue() -> SesQueue:
