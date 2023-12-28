@@ -61,19 +61,33 @@ class Consumer:
         self.close_connection()
 
     def queue_consume(self):
-        self.channel.basic_qos(prefetch_count=1)
+        # self.channel.basic_qos(prefetch_count=1)
 
         self.channel.add_on_cancel_callback(self.on_consumer_cancelled)
 
         # --------------------
         logger.info("Declare queue")
         for queue in self.queues:
-            self.channel.queue_declare(queue=queue.queue_name)
-            self.channel.basic_consume(
-                queue=queue.queue_name,
-                on_message_callback=queue.on_message,
-                # auto_ack=True,
+            self.channel.queue_declare(
+                queue=queue.queue_name, arguments=queue.args, durable=queue.is_durable
             )
+
+            if queue.exchange_name:
+                self.channel.exchange_declare(
+                    exchange=queue.exchange_name, exchange_type=queue.exchange_type
+                )
+
+                self.channel.queue_bind(
+                    queue=queue.queue_name,
+                    exchange=queue.exchange_name,
+                    routing_key=queue.exchange_routing_key,
+                )
+
+            if queue.is_consume:
+                self.channel.basic_consume(
+                    queue=queue.queue_name,
+                    on_message_callback=queue.on_message,
+                )
         # --------------------
 
         self.consuming = True

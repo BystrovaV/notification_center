@@ -1,7 +1,6 @@
-import json
-
 from core.exceptions import MongoDBConnectionException, SesServiceConnectionException
 from core.settings import Settings
+from domain.email import Email
 from ports.email_service import EmailService
 from ports.repository import DocumentRepository
 
@@ -17,17 +16,24 @@ class SaveEmailUseCase:
         self.email_service = email_service
         self.settings = settings
 
-    def __call__(self, body):
-        message = json.loads(body.decode("utf-8"))
+    def __call__(self, email: Email) -> Email:
+        # message = json.loads(body.decode("utf-8"))
 
+        self.doc_repository.start_transaction()
         try:
-            id = self.doc_repository.save_document(self.settings.DB_COLLECTION, message)
+            id = self.doc_repository.save_document(
+                self.settings.DB_COLLECTION, email.to_dict()
+            )
         except MongoDBConnectionException:
+            self.doc_repository.abort_transaction()
             raise Exception
 
         try:
-            message_id = self.email_service.send_email(message["email"], message["msg"])
+            message_id = self.email_service.send_email(email.to_address, email.message)
         except SesServiceConnectionException:
+            self.doc_repository.abort_transaction()
             raise Exception
 
-        message["message_id"] = message_id
+        email.id = message_id
+        self.doc_repository.commit_transaction()
+        return email

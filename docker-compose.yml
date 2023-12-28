@@ -26,16 +26,63 @@ services:
     networks:
       - app-network
 
-  mongodb:
-    image: mongo
+#  mongodb:
+#    image: mongo
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: root
+#      MONGO_INITDB_ROOT_PASSWORD: example
+#    volumes:
+#      - ./data/mongodb:/data/db
+#      - ./data/mongodb_config:/data/configdb
+#    ports:
+#      - 27017:27017
+#    networks:
+#      - app-network
+
+  mongodb-primary:
+    image: bitnami/mongodb:latest
+    user: root
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-    volumes:
-      - ./data/mongodb:/data/db
-      - ./data/mongodb_config:/data/configdb
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-primary
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=example
+      - MONGODB_ROOT_USERNAME=root
+      - MONGODB_REPLICA_SET_KEY=example
+      - MONGODB_REPLICA_SET_NAME=rs0
     ports:
       - 27017:27017
+    volumes:
+      - ./data/mongodb_master_data:/bitnami
+    networks:
+      - app-network
+
+  mongodb-secondary:
+    image: bitnami/mongodb:latest
+    user: root
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=example
+      - MONGODB_REPLICA_SET_KEY=example
+      - MONGODB_REPLICA_SET_NAME=rs0
+    networks:
+      - app-network
+
+  mongodb-arbiter:
+    image: bitnami/mongodb:latest
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-arbiter
+      - MONGODB_REPLICA_SET_MODE=arbiter
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=example
+      - MONGODB_REPLICA_SET_KEY=example
+      - MONGODB_REPLICA_SET_NAME=rs0
     networks:
       - app-network
 

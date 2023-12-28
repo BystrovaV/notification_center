@@ -25,13 +25,25 @@ class MongoDB:
 
 class MongoDBRepository(DocumentRepository):
     def __init__(self, client: MongoClient, db_name: str):
-        self.client = client
-        self.db = client[db_name]
+        self.session = client.start_session()
+        self.db = self.session.client[db_name]
+
+    def __del__(self):
+        self.session.end_session()
+
+    def start_transaction(self):
+        self.session.start_transaction()
+
+    def abort_transaction(self):
+        self.session.abort_transaction()
+
+    def commit_transaction(self):
+        self.session.commit_transaction()
 
     def save_document(self, collection_name: str, body: dict) -> str:
         try:
             collection = self.db[collection_name]
-            inserted_id = collection.insert_one(body).inserted_id
+            inserted_id = collection.insert_one(body, session=self.session).inserted_id
             return str(inserted_id)
         except Exception as e:
             logger.error(e)
@@ -40,7 +52,9 @@ class MongoDBRepository(DocumentRepository):
     def get_all(self, collection_name: str) -> list:
         try:
             collection = self.db[collection_name]
-            return MongoDBRepository.convert_cursor_to_list(collection.find())
+            return MongoDBRepository.convert_cursor_to_list(
+                collection.find(session=self.session)
+            )
         except Exception as e:
             logger.error(e)
             raise MongoDBConnectionException
@@ -48,7 +62,7 @@ class MongoDBRepository(DocumentRepository):
     def find_by_id(self, collection_name: str, id: str):
         try:
             collection = self.db[collection_name]
-            return collection.find_one({"_id": ObjectId(id)})
+            return collection.find_one({"_id": ObjectId(id)}, session=self.session)
         except Exception as e:
             logger.error(e)
             raise MongoDBConnectionException

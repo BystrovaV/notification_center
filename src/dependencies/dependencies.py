@@ -1,6 +1,7 @@
 import logging
 
 from adapters.aws_services import SESService
+from adapters.dead_letter_queue import DeadLetterQueue
 from adapters.ses_queue import SesQueue
 from core.settings import get_settings
 from dependencies.localstack_dependency import get_localstack_ses_client
@@ -26,6 +27,10 @@ def ses_queue() -> SesQueue:
     return SesQueue(get_settings(), email_service)
 
 
+def dlq_queue() -> DeadLetterQueue:
+    return DeadLetterQueue(get_settings())
+
+
 def list_queue() -> list[Queue]:
     logging.info("create list")
-    return [ses_queue()]
+    return [ses_queue(), dlq_queue()]

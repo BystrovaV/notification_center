@@ -7,6 +7,15 @@ class InMemoryDocumentRepository(DocumentRepository):
     def __init__(self):
         self.collections = {}
 
+    def start_transaction(self):
+        pass
+
+    def abort_transaction(self):
+        pass
+
+    def commit_transaction(self):
+        pass
+
     def save_document(self, collection_name: str, body: dict):
         id = uuid.uuid4()
         body["_id"] = id
